@@ -15,7 +15,7 @@ class DataBase:
             cls.__cls = super().__new__(cls)
         return cls.__cls
 
-    def __init__(self, host='', user='', password='', database=''):
+    def __init__(self, host='localhost', user='root', password='75645', database='levels'):
         self.mydb = mysql.connector.connect(host=host,
                                             user=user,
                                             password=password,
@@ -36,8 +36,8 @@ class DataBase:
 
 
 class Price:
-    def __init__(self, url='', coins=[],
-                 convert='USD', api=''):
+    def __init__(self, url='https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', coins=[],
+                 convert='USD', api='a978e5c4-9713-4b44-aa0d-1aa33962d3ab'):
         self.url = url
         self.parameters = {'symbol': ','.join(coins),
                            'convert': convert}
@@ -56,63 +56,70 @@ class Price:
             print(e)
 
 
-token = ''
+token = '5976363132:AAFfTs5K5C3NvdoGqxgKVyyDg8BQbUF1CNs'
 bot = async_telebot.AsyncTeleBot(token)
-database = DataBase()
 
 
-def eq(a, b, diff=0.05):
+def eq(a, b, diff=0.005):
     res = 1 - (min(a, b) / max(a, b))
     return res <= diff
 
 
 @bot.message_handler(commands=['set'])
 async def set_price(msg):
-    if msg.chat.id == 'userid':
+    database = DataBase()
+    if msg.chat.id == 5463317462:
         txt = msg.text.replace('/set ', '')
         if re.fullmatch(r'\w+: \d+\.?\d*', txt):
             coin = re.search(r'\w+', txt).group().upper()
             price = float(re.search(r'\d+\.?\d*', txt).group())
             if (coin, price) not in database.get_levels():
                 database.create_level(coin, price)
+                print(f"set{coin}: price:{price}")
             else:
-                await bot.send_message('userid', 'Already created')
+                await bot.send_message(5463317462, 'Already created')
 
 
 @bot.message_handler(commands=['del'])
 async def del_price(msg):
-    if msg.chat.id == 'userid':
+    database = DataBase()
+    if msg.chat.id == 5463317462:
         txt = msg.text.replace('/del ', '')
         if re.fullmatch(r'\w+: \d+\.?\d*', txt):
             coin = re.search(r'\w+', txt).group().upper()
             price = float(re.search(r'\d+\.?\d*', txt).group())
             if (coin, price) in database.get_levels():
                 database.del_level(coin, price)
+                print(f"del{coin}: price:{price}")
             else:
-                await bot.send_message('userid', 'Not found')
+                await bot.send_message(5463317462, 'Not found')
 
 
 @bot.message_handler(commands=['scan'])
 async def scan(msg):
-    while True:
-        levels = database.get_levels()
-        coins = list(set(map(lambda x: x[0], levels)))
-        prices_dct = Price(coins=coins).get_price(coins=coins)
-        res = list(filter(lambda x: eq(x[1], prices_dct[x[0]]), levels))
-        if res:
-            message = '\n'.join(map(lambda x: ' ||| '.join([*map(str, x), str(round(prices_dct[x[0]], 3))]), res))
-            [database.del_level(*i) for i in res]
-            await bot.send_message('userid', message)
-        await asyncio.sleep(900)
+    database = DataBase()
+    if msg.chat.id == 5463317462:
+        while True:
+            levels = database.get_levels()
+            coins = list(set(map(lambda x: x[0], levels)))
+            prices_dct = Price(coins=coins).get_price(coins=coins)
+            res = list(filter(lambda x: eq(x[1], prices_dct[x[0]]), levels))
+            if res:
+                message = '\n'.join(map(lambda x: ' ||| '.join([*map(str, x), str(round(prices_dct[x[0]], 3))]), res))
+                [database.del_level(*i) for i in res]
+                await bot.send_message(5463317462, message)
+            await asyncio.sleep(300)
 
 
 @bot.message_handler(commands=['show'])
 async def show(msg):
-    levels = database.get_levels()
-    coins = list(set(map(lambda x: x[0], levels)))
-    prices_dct = Price(coins=coins).get_price(coins=coins)
-    message = '\n'.join(map(lambda x: ' ||| '.join([*map(str, x), str(round(prices_dct[x[0]], 3))]), levels))
-    await bot.send_message('userid', message)
+    database = DataBase()
+    if msg.chat.id == 5463317462:
+        levels = database.get_levels()
+        coins = list(set(map(lambda x: x[0], levels)))
+        prices_dct = Price(coins=coins).get_price(coins=coins)
+        message = '\n'.join(map(lambda x: ' ||| '.join([*map(str, x), str(round(prices_dct[x[0]], 3))]), levels))
+        await bot.send_message(5463317462, message)
 
 
 while True:
